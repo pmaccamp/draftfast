@@ -5,6 +5,7 @@ from collections import OrderedDict
 from terminaltables import AsciiTable
 import numpy as np
 
+
 # TODO encapsulate this into an object
 
 
@@ -19,13 +20,13 @@ def parse_exposure_file(file_location):
         reader = csv.DictReader(filename)
         for row in reader:
             if 'name' not in row or \
-               'min' not in row or \
-               'max' not in row:
+                    'min' not in row or \
+                    'max' not in row:
                 raise Exception('''
                     You must provide a min, max and name
                     for each row - got {}.
                     '''.format(row)
-                )
+                                )
             exposures.append({
                 'name': row['name'],
                 'min': float(row['min']),
@@ -36,7 +37,7 @@ def parse_exposure_file(file_location):
 
 
 def get_exposure_args(existing_rosters, exposure_bounds, n, use_random,
-                      random_seed):
+                      random_seed, max_player_exposure):
     exposures = {}
     for r in existing_rosters:
         for p in r.players:
@@ -44,14 +45,14 @@ def get_exposure_args(existing_rosters, exposure_bounds, n, use_random,
 
     if use_random:
         return get_exposure_args_random(exposures, exposure_bounds, n,
-                                        random_seed)
+                                        random_seed, max_player_exposure)
 
     return get_exposure_args_deterministic(exposures, existing_rosters,
-                                           exposure_bounds)
+                                           exposure_bounds, max_player_exposure)
 
 
 def get_exposure_args_deterministic(exposures, existing_rosters,
-                                    exposure_bounds):
+                                    exposure_bounds, max_player_exposure):
     banned = []
     locked = []
 
@@ -69,13 +70,25 @@ def get_exposure_args_deterministic(exposures, existing_rosters,
         elif lineups >= max_lines:
             banned.append(name)
 
+    if max_player_exposure and existing_rosters:
+        total = float(len(existing_rosters) + 1)
+        max_lines = math.floor(max_player_exposure * total)
+
+        latest_roster = existing_rosters[-1]
+
+        for player in latest_roster.players:
+            lineups = exposures.get(player.name, 0)
+
+            if lineups >= max_lines:
+                banned.append(player.name)
+
     return {
         'banned': banned,
         'locked': locked,
     }
 
 
-def get_exposure_args_random(exposures, exposure_bounds, n, random_seed):
+def get_exposure_args_random(exposures, exposure_bounds, n, random_seed, max_player_exposure):
     locked = []
 
     for bound in exposure_bounds:
@@ -199,6 +212,6 @@ def get_exposure_matrix(rosters, exclude=[]):
 
     table = AsciiTable(rows)
     table.inner_row_border = True
-    table.justify_columns = {i+1: 'center' for i in range(len(sorted_names))}
+    table.justify_columns = {i + 1: 'center' for i in range(len(sorted_names))}
 
     return table.table

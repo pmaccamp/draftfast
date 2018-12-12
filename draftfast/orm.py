@@ -214,10 +214,10 @@ class Player(object):
         lock=False,
         multi_position=False
     ):
-        self.pos = pos
-        self.name = name
+        self.pos = pos.strip()
+        self.name = name.strip()
         self.cost = float(cost)
-        self.team = team
+        self.team = team.strip()
         self.matchup = matchup
         self.proj = proj
         self.average_score = average_score
