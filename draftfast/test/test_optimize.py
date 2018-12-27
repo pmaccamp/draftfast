@@ -4,19 +4,22 @@ from draftfast.optimize import run, run_multi
 from draftfast import rules
 from draftfast.orm import Player
 from draftfast.csv_parse import salary_download
-from draftfast.settings import OptimizerSettings, PlayerPoolSettings
+from draftfast.settings import (
+    OptimizerSettings, PlayerPoolSettings, Stack
+)
 
 mock_player_pool = [
-    Player(name='A1', cost=5500, proj=55, pos='PG'),
-    Player(name='A2', cost=5500, proj=55, pos='PG'),
-    Player(name='A3', cost=5500, proj=55, pos='SG'),
-    Player(name='A4', cost=5500, proj=55, pos='SG'),
-    Player(name='A5', cost=5500, proj=55, pos='SF'),
-    Player(name='A6', cost=5500, proj=55, pos='SF'),
-    Player(name='A7', cost=5500, proj=55, pos='PF'),
-    Player(name='A8', cost=5500, proj=55, pos='PF'),
-    Player(name='A9', cost=5500, proj=55, pos='C'),
-    Player(name='A10', cost=5500, proj=55, pos='C'),
+    Player(name='A1', cost=5500, proj=40, pos='PG'),
+    Player(name='A2', cost=5500, proj=41, pos='PG'),
+    Player(name='A11', cost=5500, proj=50, pos='PG'),
+    Player(name='A3', cost=5500, proj=42, pos='SG'),
+    Player(name='A4', cost=5500, proj=43, pos='SG'),
+    Player(name='A5', cost=5500, proj=44, pos='SF'),
+    Player(name='A6', cost=5500, proj=45, pos='SF'),
+    Player(name='A7', cost=5500, proj=46, pos='PF'),
+    Player(name='A8', cost=5500, proj=47, pos='PF'),
+    Player(name='A9', cost=5500, proj=48, pos='C'),
+    Player(name='A10', cost=5500, proj=49, pos='C'),
 ]
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -51,6 +54,32 @@ def test_nba_fd():
     ntools.assert_not_equals(roster, None)
 
 
+def test_nfl_dk_mock():
+    mock_dk_pool = [
+        Player(name='A1', cost=5500, proj=40, pos='QB'),
+        Player(name='A2', cost=5500, proj=41, pos='QB'),
+        Player(name='A11', cost=5500, proj=50, pos='WR'),
+        Player(name='A3', cost=5500, proj=42, pos='WR'),
+        Player(name='A4', cost=5500, proj=43, pos='WR'),
+        Player(name='A5', cost=5500, proj=44, pos='WR'),
+        Player(name='A6', cost=5500, proj=45, pos='RB'),
+        Player(name='A7', cost=5500, proj=46, pos='RB'),
+        Player(name='A8', cost=5500, proj=47, pos='RB'),
+        Player(name='A9', cost=5500, proj=48, pos='TE'),
+        Player(name='A10', cost=5500, proj=49, pos='TE'),
+        Player(name='A12', cost=5500, proj=51, pos='DST'),
+        Player(name='A13', cost=5500, proj=52, pos='DST'),
+    ]
+
+    roster = run(
+        rule_set=rules.DK_NFL_RULE_SET,
+        player_pool=mock_dk_pool,
+    )
+
+    ntools.assert_not_equal(roster, None)
+    ntools.assert_equal(roster.projected(), 420.0)
+
+
 def test_nfl_dk():
     players = salary_download.generate_players_from_csvs(
         salary_file_location=salary_file,
@@ -61,7 +90,9 @@ def test_nfl_dk():
         rule_set=rules.DK_NFL_RULE_SET,
         player_pool=players,
     )
-    ntools.assert_not_equals(roster, None)
+
+    ntools.assert_not_equal(roster, None)
+    ntools.assert_equal(roster.projected(), 117.60)
 
 
 def test_nfl_fd():
@@ -136,6 +167,42 @@ def test_multi_roster_nba():
     ntools.assert_not_equals(roster == second_roster, True)
 
 
+def test_uniques_nba():
+    roster = run(
+        rule_set=rules.DK_NBA_RULE_SET,
+        player_pool=mock_player_pool,
+    )
+    second_roster = run(
+        rule_set=rules.DK_NBA_RULE_SET,
+        player_pool=mock_player_pool,
+        optimizer_settings=OptimizerSettings(
+            existing_rosters=[roster],
+        ),
+    )
+    third_roster = run(
+        rule_set=rules.DK_NBA_RULE_SET,
+        player_pool=mock_player_pool,
+        optimizer_settings=OptimizerSettings(
+            existing_rosters=[roster],
+            uniques=2,
+        ),
+    )
+
+    players = roster.sorted_players()
+    second_players = second_roster.sorted_players()
+    third_players = third_roster.sorted_players()
+    crossover_a = list(set(players).intersection(second_players))
+    crossover_b = list(set(players).intersection(third_players))
+    ntools.assert_equal(
+        len(crossover_a),
+        rules.DK_NBA_RULE_SET.roster_size - 1
+    )
+    ntools.assert_equal(
+        len(crossover_b),
+        rules.DK_NBA_RULE_SET.roster_size - 2
+    )
+
+
 def test_stack():
     players = salary_download.generate_players_from_csvs(
         salary_file_location=salary_file,
@@ -146,8 +213,9 @@ def test_stack():
         rule_set=rules.DK_NFL_RULE_SET,
         player_pool=players,
         optimizer_settings=OptimizerSettings(
-            stack_team='NE',
-            stack_count=5,
+            stacks=[
+                Stack(team='NE', count=5)
+            ]
         )
     )
     ne_players_count = len([
@@ -171,8 +239,9 @@ def test_force_combo():
             locked=['Sam Bradford'],
         ),
         optimizer_settings=OptimizerSettings(
-            stack_team='NE',
-            stack_count=5,
+            stacks=[
+                Stack(team='NE', count=5)
+            ]
         )
     )
     qb = roster.sorted_players()[0]

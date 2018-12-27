@@ -22,7 +22,7 @@ NAME_MAP = {
 }
 
 
-def map_pids(pid_file, game=DRAFT_KINGS):
+def map_pids(pid_file, encoding, errors, game=DRAFT_KINGS):
     start = NAME_MAP.get(game).get('start')
     name = NAME_MAP.get(game).get('name')
     position = NAME_MAP.get(game).get('position')
@@ -45,7 +45,8 @@ def map_pids(pid_file, game=DRAFT_KINGS):
                 "https://www.draftkings.com/lineup/upload.")
 
         f.close()
-        f = islice(open(pid_file, "r"), n, None)
+        f = islice(open(pid_file, 'r',
+                        encoding=encoding, errors=errors), n, None)
         reader = csv.DictReader(f, fieldnames=fields)
         for line in reader:
             player_map[line[name] + " " + line[position]] = line[p_id]
@@ -53,11 +54,44 @@ def map_pids(pid_file, game=DRAFT_KINGS):
     return player_map
 
 
-def write_to_csv(writer, player_map, roster, game=DRAFT_KINGS):
+def write_to_csv(writer, player_map, roster, game=DRAFT_KINGS,
+                 league='NBA'):
     players = roster.sorted_players()
 
     ordered_possible = []
-    if game == DRAFT_KINGS:
+    if game == DRAFT_KINGS and league == 'EL':
+        ordered_possible = [
+            _on_position(players, ['G']),
+            _on_position(players, ['G']),
+            _on_position(players, ['F']),
+            _on_position(players, ['F']),
+            _on_position(players, ['F']),
+            players
+        ]
+    elif game == DRAFT_KINGS and league == 'SOCCER':
+        ordered_possible = [
+            _on_position(players, ['F']),
+            _on_position(players, ['F']),
+            _on_position(players, ['M']),
+            _on_position(players, ['M']),
+            _on_position(players, ['D']),
+            _on_position(players, ['D']),
+            _on_position(players, ['GK']),
+            players
+        ]
+    elif game == DRAFT_KINGS and league == 'NHL':
+        ordered_possible = [
+            _on_position(players, ['C']),
+            _on_position(players, ['C']),
+            _on_position(players, ['W']),
+            _on_position(players, ['W']),
+            _on_position(players, ['W']),
+            _on_position(players, ['D']),
+            _on_position(players, ['D']),
+            _on_position(players, ['G']),
+            players
+        ]
+    elif game == DRAFT_KINGS:
         ordered_possible = [
             _on_position(players, ['PG']),
             _on_position(players, ['SG']),

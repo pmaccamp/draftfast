@@ -180,6 +180,31 @@ class PGARoster(Roster):
     }
 
 
+class SoccerRoster(Roster):
+    POSITION_ORDER = {
+        'F': 0,
+        'M': 1,
+        'D': 2,
+        'GK': 3,
+    }
+
+
+class ELRoster(Roster):
+    POSITION_ORDER = {
+        'G': 0,
+        'F': 1,
+    }
+
+
+class NHLRoster(Roster):
+    POSITION_ORDER = {
+        'C': 0,
+        'W': 1,
+        'D': 2,
+        'G': 3,
+    }
+
+
 class RosterSelect:
     @staticmethod
     def roster_gen(league):
@@ -190,14 +215,15 @@ class RosterSelect:
             'MLB': MLBRoster(),
             'PGA': PGARoster(),
             'NASCAR': NASCARRoster(),
+            'SOCCER': SoccerRoster(),
+            'EL': ELRoster(),
+            'NHL': NHLRoster(),
         }
         return roster_dict[league]
 
 
 @total_ordering
 class Player(object):
-    _PLAYER_DATA_CACHE = {}
-
     def __init__(
         self,
         pos,
@@ -217,7 +243,7 @@ class Player(object):
         self.pos = pos.strip()
         self.name = name.strip()
         self.cost = float(cost)
-        self.team = team.strip()
+        self.team = team.strip().upper() if team else team
         self.matchup = matchup
         self.proj = proj
         self.average_score = average_score
@@ -255,6 +281,9 @@ class Player(object):
             s_min,
             s_max
         ]
+
+    def is_opposing_team_in_match_up(self, team):
+        return (team != self.team) and (team in self.matchup)
 
     def __repr__(self):
         v_avg = self.__format_v_avg()
@@ -331,17 +360,6 @@ class Player(object):
             return s
 
         return '{}. {}'.format(s[0][0], s[1])
-
-    def __set_data_cache(self):
-        self._PLAYER_DATA_CACHE[self.name] = {
-            'all_scores': self.all_scores,
-            'last_score': self.last_score,
-            'max_score': self.max_score,
-            'min_score': self.min_score,
-            'average_score': self.average_score,
-            'median_score': self.median_score,
-            'std_score': self.stdev_score,
-        }
 
     def __set_from_data_cache(self, player_data):
         if player_data is None:
